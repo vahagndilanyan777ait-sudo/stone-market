@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home'
 import Shop from './pages/Shop'
+import Designers from './pages/Designers'
 import './App.css'
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/shop" element={<Shop />} />
+          <Route path="/designers" element={<Designers />} />
         </Routes>
       </BrowserRouter>
     </>

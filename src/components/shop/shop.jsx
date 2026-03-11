@@ -126,13 +126,12 @@ const ShopContent = () => {
             setTimeout(() => {
                 setProducts(dbData);
                 setLoading(false);
-            }, 500); // Small delay to mimic network request
+            }, 500);
         };
 
         fetchFromDB();
     }, []);
 
-    // 2. Filter Logic: Decide which products to show
     const filteredProducts = activeCategory === "Բոլորը"
         ? products
         : products.filter(p => p.category === activeCategory);
@@ -140,7 +139,6 @@ const ShopContent = () => {
     return (
         <div className="max-w-7xl mx-auto px-4 py-8 bg-white min-h-screen">
 
-            {/* 1. Breadcrumbs (Static) */}
             <nav className="flex items-center space-x-2 text-sm mb-10 text-gray-500">
                 <a href="#" className="hover:text-emerald-600 transition-colors">Գլխավոր</a>
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -149,7 +147,6 @@ const ShopContent = () => {
                 <span className="text-gray-900 font-bold">Խանութ</span>
             </nav>
 
-            {/* 2. Category Filter (Interactive) */}
             <div className="flex flex-col md:flex-row md:items-start gap-6 mb-12">
                 <h2 className="text-lg font-black text-gray-900 pt-1 whitespace-nowrap">
                     Կատեգորիա:
@@ -170,7 +167,6 @@ const ShopContent = () => {
                 </div>
             </div>
 
-            {/* 3. Product Grid with Loading & Empty States */}
             {loading ? (
                 <div className="flex justify-center items-center h-64">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
