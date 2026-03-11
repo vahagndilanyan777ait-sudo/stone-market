@@ -14,24 +14,21 @@ const designers = [
 const DesignerGrid = () => {
   return (
     <div className="bg-gray-50 min-h-screen p-8 font-sans">
-      {/* Page Title */}
       <h1 className="text-center text-2xl font-bold mb-10 tracking-widest uppercase">
         ԴԻԶԱՅՆԵՐՆԵՐ
       </h1>
 
-      {/* Grid Container */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {designers.map((item) => (
           <div 
             key={item.id} 
             className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
           >
-            {/* Image Placeholder */}
             <div className="h-48 bg-gray-200 flex items-center justify-center">
                <img src={item.logo} alt={item.name} className="w-full h-full object-cover" />
             </div>
             
-            {/* Content */}
+            
             <div className="p-5">
               <h3 className="font-bold text-sm mb-2 text-gray-800 uppercase line-clamp-1">
                 {item.name}
@@ -44,14 +41,14 @@ const DesignerGrid = () => {
         ))}
       </div>
 
-      {/* "More" Button */}
+      
       <div className="flex justify-center mt-12">
         <button className="bg-[#14cf9f] text-white px-8 py-2 rounded-md font-medium hover:bg-[#11b88d] transition-colors">
           Ավելին
         </button>
       </div>
 
-      {/* Floating Action Buttons */}
+      
       <div className="fixed bottom-6 right-6 flex flex-col gap-3">
         <button className="bg-[#14cf9f] p-3 rounded-xl text-white shadow-lg hover:scale-110 transition-transform">
           <PhoneIcon />
@@ -64,7 +61,7 @@ const DesignerGrid = () => {
   );
 };
 
-// Simple SVG Icons
+
 const PhoneIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
