@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home'
 import Shop from './pages/Shop'
 import Designers from './pages/Designers'
+import Favorites from './pages/Favorites';
 import './App.css'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/designers" element={<Designers />} />
+          <Route path="/fav" element={<Favorites />} />
         </Routes>
       </BrowserRouter>
     </>

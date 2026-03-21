@@ -25,7 +25,7 @@ const Header = () => {
                 <div className="flex items-center space-x-3">
                     <button className="p-2.5 border border-gray-200 rounded-full hover:bg-gray-50 text-gray-700 transition-colors"><FiSearch size={18} /></button>
                     <button className="p-2.5 border border-gray-200 rounded-full hover:bg-gray-50 text-gray-700 transition-colors"><FiLogOut size={18} /></button>
-                    <button className="p-2.5 border border-gray-200 rounded-full hover:bg-gray-50 text-gray-700 transition-colors"><FiHeart size={18} /></button>
+                    <a href='/fav' className="p-2.5 border border-gray-200 rounded-full hover:bg-gray-50 text-gray-700 transition-colors"><FiHeart size={18} /></a>
                     <button className="p-2.5 border border-gray-200 rounded-full hover:bg-gray-50 text-gray-700 transition-colors"><FiShoppingCart size={18} /></button>
 
                     <div className="flex items-center space-x-2 cursor-pointer border border-gray-200 rounded-full px-3 py-2 hover:bg-gray-50 transition-colors">
