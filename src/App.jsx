@@ -4,6 +4,7 @@ import Home from './pages/Home'
 import Shop from './pages/Shop'
 import Designers from './pages/Designers'
 import Favorites from './pages/Favorites';
+import Chat from './pages/Chat';
 import './App.css'
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
           <Route path="/shop" element={<Shop />} />
           <Route path="/designers" element={<Designers />} />
           <Route path="/fav" element={<Favorites />} />
+          <Route path="/chat" element={<Chat/>}/>
         </Routes>
       </BrowserRouter>
     </>
