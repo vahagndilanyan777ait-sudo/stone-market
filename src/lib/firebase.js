@@ -1,10 +1,11 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
 import { getDatabase } from 'firebase/database';
+import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCvZ_fG6D62e9KG-m2VO4qn1Rr2mvGhAWc",
   authDomain: "stone-market-703d0.firebaseapp.com",
+  databaseURL: "https://stone-market-703d0-default-rtdb.firebaseio.com", 
   projectId: "stone-market-703d0",
   storageBucket: "stone-market-703d0.firebasestorage.app",
   messagingSenderId: "822774441877",
@@ -12,7 +13,6 @@ const firebaseConfig = {
   measurementId: "G-PNCBQVZM6X"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-export const rtdb = getDatabase(app);
+export const auth = getAuth(app);
+export const db = getDatabase(app);
