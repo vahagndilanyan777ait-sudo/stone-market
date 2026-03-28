@@ -1,133 +1,184 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { auth, db } from "../../lib/firebase";
+import { ref, push, onValue, set, onDisconnect, serverTimestamp } from "firebase/database";
+import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
 
-const ChatApp = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
-  const [messages, setMessages] = useState([
-    { id: 1, text: "Բարև ձեզ: Մուտք գործեք զրույցը սկսելու համար:", sender: 'bot' }
-  ]);
-  const [input, setInput] = useState('');
+const Chat = () => {
+    const [user, setUser] = useState(null);
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState("");
+    const [usersStatus, setUsersStatus] = useState({});
+    const scrollRef = useRef();
 
-  // Handle Logic for both Google and Manual Gmail Login
-  const handleAuth = (e, method) => {
-    if (e) e.preventDefault();
-    
-    // If it's the form, grab the email, otherwise mock a Google user
-    const email = e?.target?.email?.value || "Google User";
-    setUserEmail(email);
-    setIsLoggedIn(true);
-    
-    // Add a system message upon entry
-    setMessages(prev => [...prev, { 
-      id: Date.now(), 
-      text: `Բարի գալուստ, ${email.split('@')[0]}: Ինչո՞վ կարող եմ օգնել:`, 
-      sender: 'bot' 
-    }]);
-  };
+    // 1. Ստեղծում ենք ձայնային օբյեկտը (կարող ես փոխել հղումը քո ուզած ձայնով)
+    const notificationSound = useRef(new Audio("https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3"));
 
-  const sendMessage = (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    setMessages([...messages, { id: Date.now(), text: input, sender: 'me' }]);
-    setInput('');
-  };
+    const handleLogin = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error("Login Error:", error);
+        }
+    };
 
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-200 p-4 font-sans">
-      <div className="flex flex-col h-[600px] w-full max-w-md bg-white shadow-2xl rounded-3xl overflow-hidden relative">
-        
-        {/* --- HEADER --- */}
-        <header className="bg-[#00df9a] p-5 text-white flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">💬</div>
-            <div>
-              <h1 className="font-bold leading-tight">Support Chat</h1>
-              <p className="text-[10px] uppercase tracking-wider opacity-80">
-                {isLoggedIn ? 'Ակտիվ' : 'Պահանջվում է մուտք'}
-              </p>
+    const handleLogout = () => signOut(auth);
+
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                const userStatusRef = ref(db, `db/status/${currentUser.uid}`);
+                set(userStatusRef, {
+                    state: "online",
+                    last_changed: serverTimestamp(),
+                    displayName: currentUser.displayName,
+                    photoURL: currentUser.photoURL,
+                    email: currentUser.email
+                });
+                onDisconnect(userStatusRef).update({
+                    state: "offline",
+                    last_changed: serverTimestamp()
+                });
+            } else {
+                setUser(null);
+            }
+        });
+        return () => unsubscribeAuth();
+    }, []);
+
+    // 2. Տվյալների ստացում և ձայնի միացում
+    useEffect(() => {
+        const messagesRef = ref(db, "db/messages");
+        const statusRef = ref(db, "db/status");
+
+        const unsubMessages = onValue(messagesRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const newMessagesArray = Object.values(data);
+                
+                // Ստուգում ենք՝ արդյոք նոր հաղորդագրություն կա և այն ուրիշինն է
+                if (newMessagesArray.length > messages.length) {
+                    const lastMsg = newMessagesArray[newMessagesArray.length - 1];
+                    // Եթե վերջին հաղորդագրությունը իմը չէ, միացնել ձայնը
+                    if (lastMsg.uid !== auth.currentUser?.uid) {
+                        notificationSound.current.play().catch(err => console.log("Sound play blocked by browser"));
+                    }
+                }
+                
+                setMessages(newMessagesArray);
+            }
+        });
+
+        const unsubStatus = onValue(statusRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) setUsersStatus(data);
+        });
+
+        return () => {
+            unsubMessages();
+            unsubStatus();
+        };
+    }, [messages.length]); // Կախվածությունը դրված է երկարության վրա
+
+    useEffect(() => {
+        scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    const sendMessage = async (e) => {
+        e.preventDefault();
+        if (!newMessage.trim() || !user) return;
+
+        const messagesRef = ref(db, "db/messages");
+        await push(messagesRef, {
+            text: newMessage,
+            uid: user.uid,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            timestamp: serverTimestamp()
+        });
+
+        setNewMessage("");
+    };
+
+    return (
+        <div className="flex flex-col md:flex-row gap-6 max-w-5xl mx-auto p-4 h-[700px]">
+            {/* User List Section */}
+            <div className="w-full md:w-64 bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col">
+                <div className="p-5 border-b border-gray-50 bg-gray-50/50">
+                    <h3 className="font-black text-gray-900 text-sm uppercase tracking-wider">Օգտատերեր</h3>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                    {Object.values(usersStatus).map((u, i) => (
+                        <div key={i} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-all">
+                            <div className="relative">
+                                <img src={u.photoURL} alt="user" className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
+                                <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${u.state === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`}></span>
+                            </div>
+                            <div className="overflow-hidden">
+                                <p className="text-sm font-bold text-gray-800 truncate">{u.displayName}</p>
+                                <p className="text-[10px] text-gray-400 uppercase font-medium">{u.state}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
-          </div>
-          {isLoggedIn && (
-            <button onClick={() => setIsLoggedIn(false)} className="text-xs bg-black/10 hover:bg-black/20 px-3 py-1 rounded-full transition-all">
-              Ելք
-            </button>
-          )}
-        </header>
 
-        {/* --- CHAT AREA --- */}
-        <div className={`flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 transition-all duration-500 ${!isLoggedIn ? 'blur-sm grayscale' : ''}`}>
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
-                msg.sender === 'me' ? 'bg-[#00df9a] text-white rounded-tr-none' : 'bg-white border text-gray-700 rounded-tl-none'
-              }`}>
-                {msg.text}
-              </div>
+            {/* Chat Window */}
+            <div className="flex-1 flex flex-col bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 relative">
+                <div className="bg-[#00e699] p-4 flex justify-between items-center text-white shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
+                            <svg className="w-6 h-6" fill="white" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                        </div>
+                        <div>
+                            <h2 className="font-bold text-lg leading-tight">Support Chat</h2>
+                            <p className="text-xs opacity-90">{user ? "Մուտք գործված է" : "Անցանց"}</p>
+                        </div>
+                    </div>
+                    {user ? (
+                        <button onClick={handleLogout} className="bg-black/10 px-4 py-1.5 rounded-full text-xs font-bold hover:bg-black/20 transition-all">ԵԼՔ</button>
+                    ) : (
+                        <button onClick={handleLogin} className="bg-white text-emerald-600 px-4 py-1.5 rounded-full text-xs font-bold hover:shadow-lg transition-all">ՄՈՒՏՔ</button>
+                    )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50/30">
+                    {!user && (
+                        <div className="text-center py-10">
+                            <button onClick={handleLogin} className="py-3 px-8 bg-[#00e699] text-white rounded-2xl font-bold shadow-lg">Google Մուտք</button>
+                        </div>
+                    )}
+
+                    {messages.map((msg, index) => {
+                        const isMe = msg.uid === user?.uid;
+                        return (
+                            <div key={index} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-2`}>
+                                {!isMe && <img src={msg.photoURL} className="w-8 h-8 rounded-full border border-gray-100 shadow-sm" alt="v" />}
+                                <div className={`max-w-[75%] p-3.5 rounded-2xl text-[13px] shadow-sm ${isMe ? 'bg-[#00e699] text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'}`}>
+                                    {!isMe && <p className="text-[9px] font-black mb-1 opacity-50 uppercase tracking-tighter">{msg.displayName}</p>}
+                                    {msg.text}
+                                </div>
+                            </div>
+                        );
+                    })}
+                    <div ref={scrollRef} />
+                </div>
+
+                <form onSubmit={sendMessage} className={`p-4 bg-white border-t border-gray-50 flex items-center gap-2 ${!user ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <input 
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Գրեք հաղորդագրություն..."
+                        className="flex-1 bg-gray-100 border-none rounded-2xl px-5 py-3.5 text-sm focus:ring-2 focus:ring-[#00e699] outline-none transition-all"
+                    />
+                    <button type="submit" className="bg-[#00e699] w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg hover:rotate-12 transition-all">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                    </button>
+                </form>
             </div>
-          ))}
         </div>
-
-        {/* --- LOGIN OVERLAY (GMAIL & GOOGLE) --- */}
-        {!isLoggedIn && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-white/60 backdrop-blur-sm">
-            <div className="bg-white w-full rounded-3xl shadow-2xl p-8 border border-gray-100 animate-in fade-in zoom-in duration-300">
-              <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">Մուտք</h2>
-
-              {/* Google Button */}
-              <button 
-                onClick={() => handleAuth(null, 'google')}
-                className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-all active:scale-95 mb-4"
-              >
-                <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-5 h-5" alt="G" />
-                <span className="text-sm font-semibold text-gray-700">Մուտք Google-ով</span>
-              </button>
-
-              <div className="flex items-center my-6">
-                <div className="flex-1 h-px bg-gray-200"></div>
-                <span className="px-3 text-xs text-gray-400 font-medium">ԿԱՄ GMAIL</span>
-                <div className="flex-1 h-px bg-gray-200"></div>
-              </div>
-
-              {/* Gmail Form */}
-              <form onSubmit={(e) => handleAuth(e, 'gmail')} className="space-y-4">
-                <input 
-                  name="email"
-                  type="email" 
-                  placeholder="Էլ. հասցե (Gmail)" 
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none transition-all text-sm" 
-                  required 
-                />
-                <input 
-                  type="password" 
-                  placeholder="Գաղտնաբառ" 
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-400 outline-none transition-all text-sm" 
-                  required 
-                />
-                <button type="submit" className="w-full bg-[#00df9a] hover:bg-[#00c88a] text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95">
-                  Մուտք գործել
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* --- INPUT BAR --- */}
-        <form onSubmit={sendMessage} className={`p-4 bg-white border-t flex gap-2 ${!isLoggedIn ? 'opacity-20 pointer-events-none' : ''}`}>
-          <input 
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Գրեք հաղորդագրություն..." 
-            className="flex-1 bg-gray-100 border-none rounded-full px-5 py-2.5 focus:ring-2 focus:ring-emerald-400 outline-none text-sm"
-          />
-          <button type="submit" className="bg-[#00df9a] text-white p-2.5 rounded-full hover:scale-110 active:scale-95 transition-all shadow-md">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 rotate-90">
-              <path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z" />
-            </svg>
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+    );
 };
 
-export default ChatApp;
+export default Chat;
